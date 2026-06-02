@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Project-specific ---
+# macOS
+.DS_Store
+# PyCharm / JetBrains
+.idea/
+# Personal 14-day learning plan — kept local, not part of the public repo
+PLAN.md

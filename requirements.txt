@@ -1,0 +1,10 @@
+# Extract (Phase 2)
+spotipy
+python-dotenv
+psycopg2-binary
+
+# Transform (Phase 3)
+dbt-postgres
+
+# Test
+pytest
