@@ -121,11 +121,11 @@ POSTGRES_PORT=5432
 
 ## Roadmap
 
-**Phase 1 — Foundation**
-- [ ] Postgres 15 running via Docker Compose
-- [ ] Repo + `.gitignore` + `.env.example` scaffolding
-- [ ] Spotify developer app registered, credentials in `.env`
-- [ ] `SELECT 1` succeeds against the container
+**Phase 1 — Foundation** ✅
+- [x] Postgres 15 running via Docker Compose
+- [x] Repo + `.gitignore` + `.env.example` scaffolding
+- [x] Spotify developer app registered, credentials in `.env`
+- [x] `SELECT 1` succeeds against the container
 
 **Phase 2 — Extract & Load**
 - [ ] OAuth flow to obtain a refresh token
