@@ -80,7 +80,7 @@ spotify-elt-pipeline/
 ## Getting Started
 
 ### Prerequisites
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) — or, on macOS that predates Docker Desktop's requirements, [Colima](https://github.com/abiosoft/colima) (`brew install colima docker docker-compose`, then `colima start`). The `docker` / `docker compose` commands below work the same either way.
 - Python 3.11+
 - A [Spotify Developer app](https://developer.spotify.com/dashboard) (free) for your Client ID and Secret
 
