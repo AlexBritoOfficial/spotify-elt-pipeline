@@ -128,9 +128,9 @@ POSTGRES_PORT=5432
 - [x] `SELECT 1` succeeds against the container
 
 **Phase 2 — Extract & Load**
-- [ ] OAuth flow to obtain a refresh token
-- [ ] Python client pulling recently-played + top tracks
-- [ ] Raw responses landing in the `raw` schema (idempotent)
+- [x] OAuth flow to obtain a refresh token
+- [x] Python client pulling recently-played + top tracks
+- [x] Raw responses landing in the `raw` schema (idempotent)
 
 **Phase 3 — Transform**
 - [ ] Star schema DDL (`dim_track`, `dim_artist`, `fact_plays`)
