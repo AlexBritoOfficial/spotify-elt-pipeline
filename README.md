@@ -45,7 +45,7 @@ flowchart LR
 |---|---|---|
 | Extraction | Python 3.11 | Spotify API client, scheduling glue |
 | Storage / Warehouse | Postgres 15 | Reliable, SQL-native, easy to run in Docker |
-| Transformation | dbt *(planned)* | Versioned, tested, modular SQL transforms |
+| Transformation | dbt | Versioned, tested, modular SQL transforms |
 | Infrastructure | Docker Compose | Reproducible local environment |
 | Orchestration | cron → Airflow/Dagster *(later)* | Scheduled, observable runs |
 
