@@ -66,9 +66,9 @@ like *"total listening minutes by genre this month"* a simple, fast join +
 group-by that any analyst (or BI tool) can write.
 
 ```
-        dim_genre        dim_track
-              \             /
-   bridge ---  dim_artist  ---  fact_plays  --- (dim_date, later)
+   dim_date   dim_genre   dim_track
+          \       |        /
+           dim_artist — bridge — fact_plays
 ```
 
 ### Grain — the most important word in modeling
@@ -245,6 +245,20 @@ We configured (in `dbt_project.yml`):
 This view/table trade-off (speed & stability vs freshness & cost) is a constant
 real-world judgment call.
 
+### 4d. The date dimension (`dim_date`)
+A **date dimension** is a table with one row per calendar day and lots of
+pre-computed attributes (year, quarter, month, weekday name, `is_weekend`…). Why
+build one instead of just calling SQL date functions on `played_at`?
+- **Reusable, consistent** date logic — "is this a weekend?" is defined once.
+- **Fast, simple analytics** — slicing plays by month/weekday becomes a plain
+  join + group-by that any BI tool can do.
+- It's the single most common dimension in the entire industry.
+
+Ours uses Postgres `generate_series` to build the spine, with the range
+**derived from the data** (full years spanning the play history) so it grows
+automatically — no hardcoded dates. The key is the classic **smart key**: the
+integer `YYYYMMDD` (e.g. `20260604`), and `fact_plays.date_key` joins to it.
+
 ---
 
 ## 5. Why this matters in the field
@@ -323,14 +337,16 @@ real-world judgment call.
 | `models/marts/dim_artist.sql` | One row per artist (union of play-artists and tag-artists), with a convenience `primary_genre`. |
 | `models/marts/dim_track.sql` | One row per track with album attributes + a `dim_artist` FK. |
 | `models/marts/dim_genre.sql` | One row per distinct cleaned genre. |
+| `models/marts/dim_date.sql` | Calendar date dimension — one row per day across the years in the play history (data-driven range, integer `YYYYMMDD` key + year/quarter/month/weekday/`is_weekend`). |
 | `models/marts/bridge_artist_genre.sql` | Many-to-many link of artists to their top-N genres (with rank + tag count). |
-| `models/marts/fact_plays.sql` | The fact table — one row per play; FKs to track/artist, a `played_date`, and the `duration_ms` / `play_count` measures. |
+| `models/marts/fact_plays.sql` | The fact table — one row per play; FKs to track/artist/**date**, a `played_date`, and the `duration_ms` / `play_count` measures. |
 | `models/marts/_marts__models.yml` | Descriptions + the full test suite for the marts: `not_null`, `unique`, and `relationships` (referential integrity). |
 
 ### Tests (`tests/`)
 | File | Responsibility / purpose |
 |---|---|
-| `tests/test_smoke.py` | A lightweight Python smoke test (separate from dbt's data tests). |
+| `tests/test_lastfm_client.py` | Unit tests for the Last.fm client (mocked `requests`, no network) — incl. one asserting the API key never leaks into a traceback. |
+| `tests/test_load_idempotency.py` | Integration tests against Postgres: the `INSERT … WHERE NOT EXISTS` dedup logic and the `raw.plays` uniqueness invariant (skip if DB down; rollback so nothing persists). |
 
 ### Docs (`docs/`)
 | File | Responsibility / purpose |
@@ -413,8 +429,8 @@ docker compose exec -T postgres psql -U postgres -d spotify -c \
 
 ---
 
-## 10. What's next (Phase 4 candidates)
-- A `dim_date` for clean time-based analysis.
+## 10. What's next (Phase 4)
+- ✅ `dim_date` for clean time-based analysis (done — see §4d).
 - `dbt docs` + lineage in the README.
 - Wire `dbt build` (run + test in one) into the load step, then schedule it.
 - A small dashboard / notebook on top of the star schema.

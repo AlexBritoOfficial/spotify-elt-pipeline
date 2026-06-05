@@ -1,4 +1,4 @@
-# Phase 1: a single Postgres service. Stand it up with `docker compose up -d`.
+# Postgres (warehouse) + Metabase (BI). Stand it all up with `docker compose up -d`.
 services:
   postgres:
     image: postgres:15
@@ -19,5 +19,25 @@ services:
       timeout: 5s
       retries: 5
 
+  # BI layer: point Metabase at the `analytics` star schema and build dashboards.
+  # First run takes ~1–2 min to initialize. Open http://localhost:3000.
+  # (Pin to a specific tag, e.g. metabase/metabase:v0.50.26, for reproducibility.)
+  metabase:
+    image: metabase/metabase:latest
+    container_name: spotify_metabase
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${METABASE_PORT:-3000}:3000"
+    environment:
+      # Metabase's own app data lives in an H2 file on a named volume (fine for
+      # local use) — kept separate from the spotify warehouse DB.
+      MB_DB_TYPE: h2
+      MB_DB_FILE: /metabase-data/metabase.db
+    volumes:
+      - metabase_data:/metabase-data
+
 volumes:
   postgres_data:
+  metabase_data:
