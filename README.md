@@ -45,8 +45,7 @@ flowchart LR
 |---|---|---|
 | Extraction | Python 3.11 | Spotify API client, scheduling glue |
 | Storage / Warehouse | Postgres 15 | Reliable, SQL-native, easy to run in Docker |
-| Transformation | dbt 1.10 (postgres) | Versioned, tested, modular SQL — star schema + 39 data tests |
-| BI / Serving | Metabase | No-code dashboards on the star schema |
+| Transformation | dbt | Versioned, tested, modular SQL transforms |
 | Infrastructure | Docker Compose | Reproducible local environment |
 | Orchestration | cron (`run_pipeline.sh`) → Airflow/Dagster *(later)* | Scheduled, observable runs |
 
@@ -159,25 +158,19 @@ POSTGRES_PORT=5432
 - [x] Spotify developer app registered, credentials in `.env`
 - [x] `SELECT 1` succeeds against the container
 
-**Phase 2 — Extract & Load** ✅
+**Phase 2 — Extract & Load**
 - [x] OAuth flow to obtain a refresh token
-- [x] Python client pulling recently-played + Last.fm artist tags (genre proxy)
+- [x] Python client pulling recently-played + top tracks
 - [x] Raw responses landing in the `raw` schema (idempotent)
 
-**Phase 3 — Transform** ✅
-- [x] dbt project (`dbt/`) modeling `raw` → `analytics`
-- [x] Star schema: `fact_plays` + `dim_track`/`dim_artist`/`dim_genre`/`dim_date` + `bridge_artist_genre`
-- [x] Last.fm folksonomy tag cleaning (denylist seed + regex)
-- [x] 39 dbt data tests (not_null / unique / relationships) passing
+**Phase 3 — Transform**
+- [x] Star schema DDL (`dim_track`, `dim_artist`, `fact_plays`)
+- [x] dbt models + tests for the transformation layer
 
-**Phase 4 — Operate & Present** ✅
-- [x] One-command pipeline (`run_pipeline.sh`: extract+load → `dbt build`)
-- [x] Scheduled daily via cron (PATH-hardened, Colima auto-start)
-- [x] Real test suite (`pytest`): Last.fm client units + loader idempotency integration
-- [x] dbt docs / lineage (`dbt docs generate`)
-- [x] Sample insights ([`docs/insights.md`](docs/insights.md))
-- [x] BI dashboard via Metabase ([setup guide](docs/metabase-setup.md))
-- [ ] Hosted deployment of the dashboard *(future)*
+**Phase 4 — Operate & Present**
+- [ ] Scheduled runs (cron, then an orchestrator)
+- [ ] Simple dashboard or analysis notebook
+- [ ] Sample insights + screenshots in this README
 
 ## Design Notes
 
