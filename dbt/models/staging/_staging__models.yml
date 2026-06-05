@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: stg_plays
+    description: "One flattened row per play event from raw.plays."
+    columns:
+      - name: played_at
+        description: "Timestamp the track was played — natural key for a play."
+        data_tests:
+          - not_null
+          - unique
+      - name: track_id
+        description: "Spotify track id."
+        data_tests:
+          - not_null
+      - name: artist_id
+        description: "Spotify id of the track's primary artist."
+        data_tests:
+          - not_null
+
+  - name: stg_artist_tags
+    description: "Unnested Last.fm tags — one row per (artist, tag)."
+    columns:
+      - name: artist_id
+        description: "Spotify artist id (join key back to plays)."
+        data_tests:
+          - not_null
+      - name: tag_name
+        description: "Raw Last.fm tag text (uncleaned)."
+        data_tests:
+          - not_null

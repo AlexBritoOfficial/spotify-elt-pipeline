@@ -1,0 +1,35 @@
+name: 'spotify'
+version: '1.0.0'
+config-version: 2
+
+# Connection profile — defined in this project's profiles.yml.
+# Run dbt from this directory with: dbt run --profiles-dir .
+profile: 'spotify'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# Project-wide variables.
+vars:
+  # How many cleaned Last.fm genres to keep per artist (top-N by tag count).
+  max_genres_per_artist: 3
+
+# Materialization strategy:
+#   staging / intermediate -> ephemeral-ish views (cheap, always fresh)
+#   marts (the star schema) -> tables (queryable, stable)
+models:
+  spotify:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

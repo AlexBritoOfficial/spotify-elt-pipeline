@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: >
+      Raw Spotify + Last.fm API payloads, landed as JSONB in Phase 2.
+      Immutable and replayable — transformations happen downstream in dbt.
+    tables:
+      - name: plays
+        description: "One row per recently-played track event (raw JSONB)."
+      - name: artist_tags
+        description: "Last.fm top tags per Spotify artist id — used as a genre proxy."
+      - name: artists
+        description: >
+          Reserved for Spotify artist payloads. Currently unused: Spotify
+          stopped returning `genres` to new apps, so genres come from
+          artist_tags instead.
