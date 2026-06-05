@@ -9,6 +9,7 @@ select
     md5(played_at::text) as play_key,
     md5(track_id)        as track_key,    -- FK -> dim_track
     md5(artist_id)       as artist_key,   -- FK -> dim_artist
+    to_char(played_at::date, 'YYYYMMDD')::int as date_key,  -- FK -> dim_date
     played_at,
     played_at::date      as played_date,
     duration_ms,

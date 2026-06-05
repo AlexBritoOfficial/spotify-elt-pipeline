@@ -7,7 +7,8 @@ security, working under constraints).
 
 **One-liner:** A local, reproducible **ELT pipeline** that extracts my personal
 Spotify listening history via the Web API, lands it raw (JSONB) in Postgres, and
-prepares it for in-warehouse transformation — all running in Docker.
+transforms it with **dbt** into a tested **star schema** — orchestrated end to
+end and running in Docker.
 
 ---
 
@@ -105,17 +106,72 @@ tags become a clean dbt transform in Phase 3.
 
 ---
 
+## ⭐ Modeling messy data into a tested star schema (dbt / analytics engineering)
+
+**S.** The raw layer was nested Spotify JSONB plus a noisy crowd-sourced
+**folksonomy** of Last.fm tags — case/punctuation duplicates (`Hip-Hop`/`hip hop`),
+decade tags (`90s`), nationalities, and artists' own names mixed in with real
+genres. Not analyzable as-is.
+
+**T.** Transform `raw` into a clean, trustworthy dimensional model that an analyst
+or BI tool could query directly — and prove it's correct.
+
+**A.**
+- Built a **dbt** project layered staging → intermediate → marts, with the build
+  order derived automatically from `ref()`/`source()` (the DAG).
+- Designed a **star schema** at a clearly defined grain (`fact_plays` = one play),
+  with `dim_track`/`dim_artist`/`dim_genre`/`dim_date` and a **many-to-many bridge**
+  for artist↔genre. Used `md5()` **surrogate keys** throughout.
+- Wrote a multi-stage **tag-cleaning pipeline**: normalize → dedupe (max count) →
+  filter via a **seed denylist + regex** → rank → keep top-N genres per artist.
+- Caught a subtle integrity trap (53 tagged artists > 50 plays = featured artists)
+  and made `dim_artist` the **union** of play- and tag-artists so the bridge never
+  orphans — proven by **`relationships` tests**.
+- Pinned dbt to a stable version after diagnosing that the bare package resolved
+  `dbt-core` to a 2.0 **alpha** (its dep spec's `rc` marker enables pre-releases).
+
+**R.** A queryable `analytics` star schema with **39 passing data tests**
+(not_null / unique / relationships). The folksonomy became clean ranked genres
+(e.g. Diddy → hip hop / rap / rnb), enabling one-join analytics like plays-by-genre,
+-artist, -weekday, and -release-decade.
+
+---
+
+## ⭐ Operationalizing the pipeline (Phase 4)
+
+**S.** The pieces (extract, load, transform) ran as separate manual steps.
+
+**T.** Make the whole thing one reproducible, schedulable command, and surface the
+results.
+
+**A.** Wrote `run_pipeline.sh` (Postgres up → extract+load → `dbt build` which runs
+*and* tests every model), idempotent and cron-ready; generated dbt **docs/lineage**;
+and produced a sample **insights** report (queries in `sql/analysis/`).
+
+**R.** `./run_pipeline.sh` refreshes raw data and rebuilds+tests the warehouse in
+one shot — a v1 ELT pipeline ready to schedule.
+
+---
+
 ## Concepts & practices to name-drop
 - **ELT vs ETL**; raw-first, replayable design
 - **Idempotent loads** (dedup on a natural key)
 - **JSONB** for schema-flexible raw storage
-- **Docker Compose** for reproducible infrastructure
-- **OAuth** refresh-token flow
-- **Separation of concerns** (extract vs load modules)
+- **dbt**: models, `ref()`/`source()` DAG, materializations (view vs table), seeds
+- **Dimensional modeling**: star schema, grain, fact/dimension, **bridge** table,
+  **surrogate keys**, a **date dimension**
+- **Data testing**: not_null / unique / **referential integrity** (relationships)
+- **Docker Compose** for reproducible infrastructure; **OAuth** refresh-token flow
+- **BI / serving layer** (Metabase on the star schema — the modern data stack end to end)
+- **Separation of concerns**; **dependency pinning** for reproducibility
 - **Git/GitHub workflow** (branches, PRs) and **secret management**
 
 ## Quick facts / metrics
-- 50 plays loaded; idempotent (0 duplicates on re-run)
-- Postgres 15 in Docker (Colima runtime, macOS 13)
-- `raw` → `analytics` schema separation
-- Phase 1 (foundation) + Phase 2 core (extract/load of plays) complete
+- End-to-end **ELT**: 50 plays → raw JSONB → dbt star schema, one command
+- **9 dbt models, 39 data tests passing**; `fact_plays`(50), `dim_track`(49),
+  `dim_artist`(51), `dim_genre`(41), `dim_date`(365), `bridge_artist_genre`(147)
+- Idempotent throughout (0 duplicates on re-run; dbt rebuilds deterministically)
+- Last.fm enrichment: 53 artists → cleaned, ranked genres
+- Postgres 15 in Docker (Colima runtime, macOS 13); `raw` → `analytics` separation
+- **Metabase** BI on the star schema (full stack: ingest → warehouse → dbt → BI)
+- **All four phases complete** (foundation · extract/load · transform · operate)

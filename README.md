@@ -2,13 +2,13 @@
 
 > An ELT pipeline that extracts personal listening data from the Spotify Web API, lands it raw in Postgres, and transforms it into an analytics-ready data model.
 
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Status](https://img.shields.io/badge/status-v1%20complete-brightgreen)
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![Postgres](https://img.shields.io/badge/Postgres-15-336791)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-> **Status:** 🚧 Actively building. See the [Roadmap](#roadmap) for what's done and what's next.
+> **Status:** ✅ v1 complete — ELT runs end to end (Extract → Load → dbt Transform), with a tested star schema and a one-command pipeline. See the [Roadmap](#roadmap).
 
 ---
 
@@ -27,7 +27,7 @@ flowchart LR
     A[Spotify Web API] -->|Extract · Python| B[Raw JSON]
     B -->|Load| C[("Postgres<br/>raw schema")]
     C -->|Transform · SQL / dbt| D[("Postgres<br/>analytics schema")]
-    D --> E[Analysis / Dashboard]
+    D -->|Serve · BI| E[Metabase dashboard]
 
     style A fill:#1DB954,color:#fff
     style C fill:#336791,color:#fff
@@ -45,34 +45,66 @@ flowchart LR
 |---|---|---|
 | Extraction | Python 3.11 | Spotify API client, scheduling glue |
 | Storage / Warehouse | Postgres 15 | Reliable, SQL-native, easy to run in Docker |
-| Transformation | dbt *(planned)* | Versioned, tested, modular SQL transforms |
+| Transformation | dbt 1.10 (postgres) | Versioned, tested, modular SQL — star schema + 39 data tests |
+| BI / Serving | Metabase | No-code dashboards on the star schema |
 | Infrastructure | Docker Compose | Reproducible local environment |
-| Orchestration | cron → Airflow/Dagster *(later)* | Scheduled, observable runs |
+| Orchestration | cron (`run_pipeline.sh`) → Airflow/Dagster *(later)* | Scheduled, observable runs |
 
 ## Data Model
 
-> 🚧 In progress. The target is a small star schema:
+A **star schema** built with dbt in the `analytics` schema:
 
-- `fact_plays` — one row per play event (track, timestamp, context)
-- `dim_track` — track attributes + audio features (danceability, energy, tempo…)
-- `dim_artist` — artist attributes and genres
+- `fact_plays` — one row per play event (FKs → track / artist / date; `duration_ms`, `play_count`)
+- `dim_track` — track + album attributes
+- `dim_artist` — artists, with a convenience `primary_genre`
+- `dim_genre` — distinct cleaned genres (from Last.fm tags)
+- `dim_date` — calendar date dimension
+- `bridge_artist_genre` — many-to-many artist ↔ genre
 
-Schema DDL lives in [`sql/ddl/`](sql/ddl/).
+Staging views (`stg_*`) flatten the raw JSONB and an intermediate model
+(`int_artist_genres`) cleans the messy Last.fm folksonomy tags (denylist seed +
+regex). Raw DDL lives in [`sql/ddl/`](sql/ddl/); the dbt project lives in
+[`dbt/`](dbt/). Full walkthrough: [`docs/phase-3-deep-dive.md`](docs/phase-3-deep-dive.md).
+
+## Insights
+
+Sample analytics over the current ~50-play dataset (full set in
+[`docs/insights.md`](docs/insights.md); queries in [`sql/analysis/`](sql/analysis/)):
+
+![Top genres by plays — Metabase](docs/img/TopGenresAnalysis.png)
+
+*Top genres by play count, served from the `analytics` star schema in Metabase.*
+
+| genre | plays |          | artist | plays |
+|---|---|---|---|---|
+| rock | 30 |  | Creedence Clearwater Revival | 4 |
+| classic rock | 17 |  | Foo Fighters | 2 |
+| hip hop | 12 |  | Nipsey Hussle | 2 |
+| alternative rock | 12 |  | Larry June | 2 |
+| rap | 11 |  | The Doors | 2 |
+
+The sample spans **seven decades** of release dates (1960s–2020s) and **3.3 hours**
+of listening across 49 distinct tracks.
 
 ## Project Structure
 
 ```
 spotify-elt-pipeline/
-├── docker-compose.yml      # Postgres service (+ more later)
+├── docker-compose.yml      # Postgres (warehouse) + Metabase (BI)
+├── run_pipeline.sh         # extract+load -> dbt build (cron-friendly)
 ├── .env.example            # template for required env vars (no secrets)
-├── .gitignore
 ├── requirements.txt
 ├── src/
-│   ├── extract/            # Spotify Web API clients
+│   ├── extract/            # Spotify + Last.fm API clients
 │   ├── load/               # land raw responses in Postgres
-│   └── transform/          # SQL / dbt models
+│   └── transform/          # notes (dbt project lives in dbt/)
+├── dbt/                    # dbt project: staging -> intermediate -> marts
+│   ├── models/             # stg_*, int_*, dim_*, bridge_*, fact_plays
+│   └── seeds/              # non_genre_tags.csv (denylist)
 ├── sql/
-│   └── ddl/                # schema + table definitions
+│   ├── ddl/                # raw schema + table definitions
+│   └── analysis/           # sample analytics queries
+├── docs/                   # deep-dives, insights, resume notes
 ├── tests/
 └── README.md
 ```
@@ -127,19 +159,25 @@ POSTGRES_PORT=5432
 - [x] Spotify developer app registered, credentials in `.env`
 - [x] `SELECT 1` succeeds against the container
 
-**Phase 2 — Extract & Load**
-- [ ] OAuth flow to obtain a refresh token
-- [ ] Python client pulling recently-played + top tracks
-- [ ] Raw responses landing in the `raw` schema (idempotent)
+**Phase 2 — Extract & Load** ✅
+- [x] OAuth flow to obtain a refresh token
+- [x] Python client pulling recently-played + Last.fm artist tags (genre proxy)
+- [x] Raw responses landing in the `raw` schema (idempotent)
 
-**Phase 3 — Transform**
-- [ ] Star schema DDL (`dim_track`, `dim_artist`, `fact_plays`)
-- [ ] dbt models + tests for the transformation layer
+**Phase 3 — Transform** ✅
+- [x] dbt project (`dbt/`) modeling `raw` → `analytics`
+- [x] Star schema: `fact_plays` + `dim_track`/`dim_artist`/`dim_genre`/`dim_date` + `bridge_artist_genre`
+- [x] Last.fm folksonomy tag cleaning (denylist seed + regex)
+- [x] 39 dbt data tests (not_null / unique / relationships) passing
 
-**Phase 4 — Operate & Present**
-- [ ] Scheduled runs (cron, then an orchestrator)
-- [ ] Simple dashboard or analysis notebook
-- [ ] Sample insights + screenshots in this README
+**Phase 4 — Operate & Present** ✅
+- [x] One-command pipeline (`run_pipeline.sh`: extract+load → `dbt build`)
+- [x] Scheduled daily via cron (PATH-hardened, Colima auto-start)
+- [x] Real test suite (`pytest`): Last.fm client units + loader idempotency integration
+- [x] dbt docs / lineage (`dbt docs generate`)
+- [x] Sample insights ([`docs/insights.md`](docs/insights.md))
+- [x] BI dashboard via Metabase ([setup guide](docs/metabase-setup.md))
+- [ ] Hosted deployment of the dashboard *(future)*
 
 ## Design Notes
 

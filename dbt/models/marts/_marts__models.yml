@@ -72,6 +72,19 @@ models:
         data_tests:
           - not_null
 
+  - name: dim_date
+    description: "Calendar date dimension, one row per day across the years in the play history."
+    columns:
+      - name: date_key
+        description: "Smart integer key (YYYYMMDD)."
+        data_tests:
+          - not_null
+          - unique
+      - name: date_day
+        data_tests:
+          - not_null
+          - unique
+
   - name: fact_plays
     description: "One row per play event (grain: a single listen)."
     columns:
@@ -87,6 +100,14 @@ models:
               arguments:
                 to: ref('dim_track')
                 field: track_key
+      - name: date_key
+        description: "FK to dim_date."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
       - name: artist_key
         data_tests:
           - not_null
