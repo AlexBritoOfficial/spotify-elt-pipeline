@@ -168,9 +168,9 @@ POSTGRES_PORT=5432
 - [x] dbt models + tests for the transformation layer
 
 **Phase 4 — Operate & Present**
-- [ ] Scheduled runs (cron, then an orchestrator)
-- [ ] Simple dashboard or analysis notebook
-- [ ] Sample insights + screenshots in this README
+- [x] Scheduled runs (cron, then an orchestrator)
+- [x] Simple dashboard or analysis notebook
+- [x] Sample insights + screenshots in this README
 
 ## Design Notes
 
