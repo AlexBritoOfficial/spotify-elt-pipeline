@@ -133,8 +133,8 @@ POSTGRES_PORT=5432
 - [x] Raw responses landing in the `raw` schema (idempotent)
 
 **Phase 3 — Transform**
-- [ ] Star schema DDL (`dim_track`, `dim_artist`, `fact_plays`)
-- [ ] dbt models + tests for the transformation layer
+- [x] Star schema DDL (`dim_track`, `dim_artist`, `fact_plays`)
+- [x] dbt models + tests for the transformation layer
 
 **Phase 4 — Operate & Present**
 - [ ] Scheduled runs (cron, then an orchestrator)
