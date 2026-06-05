@@ -1,40 +1,45 @@
 # Where I left off / how to resume
 
-_Last updated: 2026-06-02 — end of Phase 1._
+_Last updated: 2026-06-04 — end of Phase 2._
 
 ## Status
-- ✅ **Phase 1 complete.** Docker (via Colima) installed, repo scaffolded, Postgres 15 running, `SELECT 1` passes, schemas + raw tables created.
-- ⏭️ **Next: Phase 2 — Extract & Load** (Spotify OAuth → recently-played → land in `raw.plays`). The trickiest part is the OAuth refresh-token step; go slow there.
+- ✅ **Phase 1 complete.** Docker (Colima), repo scaffolded, Postgres 15 running, schemas + raw tables.
+- ✅ **Phase 2 complete.**
+  - OAuth refresh-token flow (`authorize.py`); token cached in `.cache`.
+  - Recently-played → `raw.plays` (idempotent) — ~50 plays loaded.
+  - **Genres via Last.fm** (Spotify removed `genres` for new apps): `artist.getTopTags` → `raw.artist_tags` (idempotent) — 53 artists enriched.
+  - **Top tracks de-scoped on purpose** — `raw.plays` already supports top-N by play count. (Reflect this in the README Phase 2 line.)
+- ⏭️ **Next: Phase 3 — dbt transforms (the resume priority).** Model `raw` → a clean star schema (`dim_track`, `dim_artist`, `fact_plays`) with tests. Clean the Last.fm folksonomy tags here (keep top-N by count, drop non-genre tags like `seen live`/`80s`, normalize case).
 
-## How to pick back up (start of a work session)
+## Pick back up (start of session)
 ```bash
-# 1. Colima auto-starts at login, but if Docker commands fail, start it:
-colima status        # should say "Running"
-colima start         # if it isn't
-
-# 2. Go to the project and bring Postgres up
+colima status                         # ensure "Running" (auto-starts at login)
 cd ~/Documents/Development/SpotifyE2EPipeline
-docker compose up -d
-
-# 3. Sanity check the database
-docker compose exec postgres psql -U postgres -d spotify -c "SELECT 1;"
+docker compose up -d                  # bring Postgres up
+source .venv/bin/activate             # activate the virtualenv
+docker compose exec postgres psql -U postgres -d spotify -c "SELECT COUNT(*) FROM raw.plays;"
 ```
 
-## Key facts to remember
-- **Credentials** live in `.env` (gitignored — never committed). Client ID + rotated secret are already filled in.
-- **Data persists** in a Docker volume (`spotifye2epipeline_postgres_data`) between sessions. `docker compose stop` is safe; `docker compose down -v` WIPES the data.
-- **Git remote uses SSH** (`git@github.com:AlexBritoOfficial/spotify-elt-pipeline.git`). Default branch is `master`.
-- **Structure source of truth = the README** (ELT, `src/{extract,load,transform}`). The `PLAN.md` 14-day plan is kept local only.
+## Current data state
+- `raw.plays` — ~50 play events (raw JSONB).
+- `raw.artist_tags` — 53 artists with Last.fm top tags (genre proxy), keyed by Spotify `artist_id` (joins back to `raw.plays`).
+- Loader is idempotent — re-run anytime: `python -m src.load.load_to_postgres`.
 
-## Phase 2 starting points (stubs already in place)
-- `src/extract/authorize.py` — one-time OAuth flow, caches a refresh token.
-- `src/extract/spotify_client.py` — wrappers for recently-played + artists.
-- `src/load/load_to_postgres.py` — insert payloads into `raw.plays` / `raw.artists` (idempotent).
+## Key facts
+- **Credentials** in `.env` (gitignored): Spotify Client ID / secret / refresh / redirect URI, and `LASTFM_API_KEY` (32 chars).
+- **Deps** in `.venv`: spotipy, python-dotenv, psycopg2-binary, requests (`pip install -r requirements.txt` to rebuild).
+- **Data persists** in Docker volume `spotifye2epipeline_postgres_data`. `docker compose down -v` WIPES it.
+- **Git:** SSH remote, default branch `master`. `gh` CLI won't build on macOS 13 → create/merge PRs in the **browser**. Alex handles commits.
+- **Uncommitted at wrap-up** — the Last.fm work (suggested branch `phase-2-lastfm-genres`): `src/extract/lastfm_client.py`, `load_artist_tags()` in `load_to_postgres.py`, `sql/ddl/02_artist_tags.sql`, `.env.example`, `requirements.txt`, and updated `docs/STAR-summary.md`.
+
+## Docs
+- `docs/STAR-summary.md` — interview STAR stories (incl. the Last.fm "routing around a constraint" story).
+- `docs/phase-2-deep-dive.md` — self-study guide for Phase 2 topics.
+- `docs/learning-notes.md` — session 1 recap.
 
 ## Useful commands
 ```bash
-docker compose ps                 # is Postgres up?
-docker compose logs postgres      # database logs
-docker compose stop               # pause (keeps data)
-docker compose down               # remove container (data persists in volume)
+docker compose ps                     # is Postgres up?
+docker compose stop                   # pause (keeps data)
+python -m src.load.load_to_postgres   # re-run extract + load (idempotent)
 ```

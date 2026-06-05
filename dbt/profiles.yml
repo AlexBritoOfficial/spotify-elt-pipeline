@@ -1,0 +1,15 @@
+# Project-local dbt profile. No secrets here — values fall back to the
+# docker-compose defaults, and can be overridden by the same env vars that
+# docker-compose.yml reads. Run with `dbt run --profiles-dir .`.
+spotify:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'postgres') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'postgres') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'spotify') }}"
+      schema: analytics
+      threads: 4

@@ -1,0 +1,100 @@
+version: 2
+
+models:
+  - name: dim_artist
+    description: "One row per artist, with their primary (top-ranked) cleaned genre."
+    columns:
+      - name: artist_key
+        description: "Surrogate key (md5 of artist_id)."
+        data_tests:
+          - not_null
+          - unique
+      - name: artist_id
+        description: "Spotify artist id (natural key)."
+        data_tests:
+          - not_null
+          - unique
+      - name: primary_genre
+        description: "Top cleaned Last.fm genre by tag count (nullable if no usable tags)."
+
+  - name: dim_track
+    description: "One row per track, with album attributes and a primary-artist FK."
+    columns:
+      - name: track_key
+        description: "Surrogate key (md5 of track_id)."
+        data_tests:
+          - not_null
+          - unique
+      - name: track_id
+        data_tests:
+          - not_null
+          - unique
+      - name: artist_key
+        description: "FK to dim_artist (primary artist)."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_artist')
+                field: artist_key
+
+  - name: dim_genre
+    description: "One row per distinct cleaned genre."
+    columns:
+      - name: genre_key
+        data_tests:
+          - not_null
+          - unique
+      - name: genre_name
+        data_tests:
+          - not_null
+          - unique
+
+  - name: bridge_artist_genre
+    description: "Many-to-many: artists to their top-N cleaned genres."
+    columns:
+      - name: artist_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_artist')
+                field: artist_key
+      - name: genre_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_genre')
+                field: genre_key
+      - name: genre_rank
+        description: "1 = strongest genre for the artist."
+        data_tests:
+          - not_null
+
+  - name: fact_plays
+    description: "One row per play event (grain: a single listen)."
+    columns:
+      - name: play_key
+        description: "Surrogate key (md5 of played_at)."
+        data_tests:
+          - not_null
+          - unique
+      - name: track_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_track')
+                field: track_key
+      - name: artist_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_artist')
+                field: artist_key
+      - name: played_at
+        data_tests:
+          - not_null
+          - unique

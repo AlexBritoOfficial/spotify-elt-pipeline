@@ -4,8 +4,11 @@ python-dotenv
 psycopg2-binary
 requests
 
-# Transform (Phase 3)
-dbt-postgres
+# Transform (Phase 3) — pin to stable 1.10.x.
+# (Bare `dbt-postgres` resolves dbt-core to a 2.0 alpha because its dependency
+#  spec contains an `rc`, which flips pip into pre-release mode.)
+dbt-core==1.10.*
+dbt-postgres==1.10.*
 
 # Test
 pytest
